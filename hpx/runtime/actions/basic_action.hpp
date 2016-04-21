@@ -7,49 +7,44 @@
 
 /// \file hpx/runtime/actions/basic_action.hpp
 
-#if !defined(HPX_RUNTIME_ACTIONS_BASIC_ACTION_NOV_14_2008_0711PM)
-#define HPX_RUNTIME_ACTIONS_BASIC_ACTION_NOV_14_2008_0711PM
+#ifndef HPX_RUNTIME_ACTIONS_BASIC_ACTION_HPP
+#define HPX_RUNTIME_ACTIONS_BASIC_ACTION_HPP
 
 #include <hpx/config.hpp>
 #include <hpx/exception.hpp>
-#include <hpx/lcos/async_fwd.hpp>
-#include <hpx/runtime_fwd.hpp>
-#include <hpx/runtime/get_lva.hpp>
 #include <hpx/runtime/launch_policy.hpp>
-#include <hpx/runtime/serialization/serialize.hpp>
 #include <hpx/runtime/actions/action_support.hpp>
 #include <hpx/runtime/actions/basic_action_fwd.hpp>
 #include <hpx/runtime/actions/continuation.hpp>
 #include <hpx/runtime/actions/invocation_count_registry.hpp>
-#include <hpx/runtime/threads/thread_helpers.hpp>
+#include <hpx/runtime/naming/address.hpp>
+#include <hpx/runtime/naming/id_type.hpp>
+#include <hpx/runtime/serialization/detail/polymorphic_id_factory.hpp>
+#include <hpx/runtime/threads/thread_data_fwd.hpp>
+#include <hpx/runtime/threads/thread_enums.hpp>
 #include <hpx/traits/action_decorate_function.hpp>
-#include <hpx/traits/is_valid_action.hpp>
+#include <hpx/traits/is_distribution_policy.hpp>
 #include <hpx/traits/is_future.hpp>
 #include <hpx/util/bind.hpp>
-#include <hpx/util/decay.hpp>
-#include <hpx/util/deferred_call.hpp>
 #include <hpx/util/tuple.hpp>
-#include <hpx/util/void_guard.hpp>
 #include <hpx/util/get_and_reset_value.hpp>
+#include <hpx/util/void_guard.hpp>
 #include <hpx/util/detail/count_num_args.hpp>
 #include <hpx/util/detail/pack.hpp>
 
-#include <boost/mpl/if.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/type_traits/is_void.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/atomic.hpp>
+#include <boost/exception_ptr.hpp>
+#include <boost/mpl/bool.hpp>
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
-#include <boost/type_traits/is_array.hpp>
-#include <boost/type_traits/is_pointer.hpp>
-#include <boost/atomic.hpp>
 
+#include <cstddef>
 #include <exception>
 #include <memory>
 #include <sstream>
 #include <string>
-
-#include <hpx/config/warnings_prefix.hpp>
+#include <type_traits>
+#include <utility>
 
 namespace hpx { namespace actions
 {
@@ -132,14 +127,14 @@ namespace hpx { namespace actions
         typedef Component component_type;
         typedef Derived derived_type;
 
-        typedef typename boost::mpl::if_c<
-            boost::is_void<R>::value, util::unused_type, R
+        typedef typename std::conditional<
+            std::is_void<R>::value, util::unused_type, R
         >::type result_type;
         typedef typename traits::promise_local_result<R>::type local_result_type;
         typedef typename detail::remote_action_result<R>::type remote_result_type;
 
         static const std::size_t arity = sizeof...(Args);
-        typedef util::tuple<typename util::decay<Args>::type...> arguments_type;
+        typedef util::tuple<typename std::decay<Args>::type...> arguments_type;
 
         typedef void action_tag;
 
@@ -158,8 +153,8 @@ namespace hpx { namespace actions
         struct invoker
         {
             template <typename ...Ts>
-            typename boost::disable_if_c<
-                (boost::is_void<R>::value && util::detail::pack<Ts...>::size >= 0),
+            typename std::enable_if<
+                (!std::is_void<R>::value && util::detail::pack<Ts...>::size >= 0),
                 result_type
             >::type operator()(
                 naming::address::address_type lva, Ts&&... vs) const
@@ -168,8 +163,8 @@ namespace hpx { namespace actions
             }
 
             template <typename ...Ts>
-            typename boost::enable_if_c<
-                (boost::is_void<R>::value && util::detail::pack<Ts...>::size >= 0),
+            typename std::enable_if<
+                (std::is_void<R>::value && util::detail::pack<Ts...>::size >= 0),
                 result_type
             >::type operator()(
                 naming::address::address_type lva, Ts&&... vs) const
@@ -329,7 +324,7 @@ namespace hpx { namespace actions
         ///////////////////////////////////////////////////////////////////////
         template <typename DistPolicy, typename ...Ts>
         HPX_FORCEINLINE
-        typename boost::enable_if_c<
+        typename std::enable_if<
             traits::is_distribution_policy<DistPolicy>::value,
             local_result_type
         >::type
@@ -345,7 +340,7 @@ namespace hpx { namespace actions
 
         template <typename DistPolicy, typename ...Ts>
         HPX_FORCEINLINE
-        typename boost::enable_if_c<
+        typename std::enable_if<
             traits::is_distribution_policy<DistPolicy>::value,
             local_result_type
         >::type
@@ -358,7 +353,7 @@ namespace hpx { namespace actions
 
         template <typename DistPolicy, typename ...Ts>
         HPX_FORCEINLINE
-        typename boost::enable_if_c<
+        typename std::enable_if<
             traits::is_distribution_policy<DistPolicy>::value,
             local_result_type
         >::type
@@ -371,7 +366,7 @@ namespace hpx { namespace actions
 
         template <typename DistPolicy, typename ...Ts>
         HPX_FORCEINLINE
-        typename boost::enable_if_c<
+        typename std::enable_if<
             traits::is_distribution_policy<DistPolicy>::value,
             local_result_type
         >::type
@@ -396,19 +391,13 @@ namespace hpx { namespace actions
         }
 
         /// Extract the current invocation count for this action
-        static boost::int64_t get_invocation_count(bool reset)
+        static std::int64_t get_invocation_count(bool reset)
         {
             return util::get_and_reset_value(invocation_count_, reset);
         }
 
     private:
-        // serialization support
-        friend class hpx::serialization::access;
-
-        template <typename Archive>
-        HPX_FORCEINLINE void serialize(Archive& ar, const unsigned int) {}
-
-        static boost::atomic<boost::int64_t> invocation_count_;
+        static boost::atomic<std::int64_t> invocation_count_;
 
     protected:
         static void increment_invocation_count()
@@ -418,7 +407,7 @@ namespace hpx { namespace actions
     };
 
     template <typename Component, typename R, typename ...Args, typename Derived>
-    boost::atomic<boost::int64_t>
+    boost::atomic<std::int64_t>
         basic_action<Component, R(Args...), Derived>::invocation_count_(0);
 
     namespace detail
@@ -443,7 +432,11 @@ namespace hpx { namespace actions
 
         template <typename Action, typename Derived>
         struct action_type
-          : boost::mpl::if_<boost::is_same<Derived, this_type>, Action, Derived>
+          : std::conditional<
+                std::is_same<Derived, this_type>::value,
+                Action,
+                Derived
+            >
         {};
     }
 
@@ -464,7 +457,7 @@ namespace hpx { namespace actions
             action, Derived
         >::type derived_type;
 
-        typedef boost::mpl::false_ direct_execution;
+        typedef std::false_type direct_execution;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -480,7 +473,7 @@ namespace hpx { namespace actions
             direct_action, Derived
         >::type derived_type;
 
-        typedef boost::mpl::true_ direct_execution;
+        typedef std::true_type direct_execution;
 
         /// The function \a get_action_type returns whether this action needs
         /// to be executed in a new thread or directly.
@@ -495,18 +488,18 @@ namespace hpx { namespace actions
     // pointer. It is instantiated only if the supplied pointer is not a
     // supported function pointer.
     template <typename TF, TF F, typename Derived = detail::this_type,
-        typename Direct = boost::mpl::false_>
+        typename Direct = std::false_type>
     struct make_action;
 
     template <typename TF, TF F, typename Derived>
-    struct make_action<TF, F, Derived, boost::mpl::false_>
+    struct make_action<TF, F, Derived, std::false_type>
       : action<TF, F, Derived>
     {
         typedef action<TF, F, Derived> type;
     };
 
     template <typename TF, TF F, typename Derived>
-    struct make_action<TF, F, Derived, boost::mpl::true_>
+    struct make_action<TF, F, Derived, std::true_type>
       : direct_action<TF, F, Derived>
     {
         typedef direct_action<TF, F, Derived> type;
@@ -514,7 +507,7 @@ namespace hpx { namespace actions
 
     template <typename TF, TF F, typename Derived = detail::this_type>
     struct make_direct_action
-      : make_action<TF, F, Derived, boost::mpl::true_>
+      : make_action<TF, F, Derived, std::true_type>
     {};
 
     // Macros usable to refer to an action given the function to expose
@@ -657,9 +650,22 @@ namespace hpx { namespace actions
     /// \endcond
 }}
 
-#include <hpx/config/warnings_suffix.hpp>
-
 /// \cond NOINTERNAL
+
+namespace hpx { namespace serialization
+{
+    template <
+        typename Archive,
+        typename Component, typename R, typename ...Args, typename Derived
+    >
+    HPX_FORCEINLINE
+    void serialize(
+        Archive& ar
+      , ::hpx::actions::basic_action<Component, R(Args...), Derived>& t
+      , unsigned int const version = 0
+    )
+    {}
+}}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helper macro for action serialization, each of the defined actions needs to
@@ -900,4 +906,4 @@ namespace hpx { namespace actions
     HPX_SERIALIZATION_ADD_CONSTANT_ENTRY(actionname, actionid)                \
 /**/
 
-#endif
+#endif /*HPX_RUNTIME_ACTIONS_BASIC_ACTION_HPP*/
