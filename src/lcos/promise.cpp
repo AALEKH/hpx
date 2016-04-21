@@ -3,13 +3,13 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <hpx/config.hpp>
-#include <hpx/runtime/components/component_registry.hpp>
-#include <hpx/runtime/components/base_lco_factory.hpp>
-#include <hpx/runtime/components/server/managed_component_base.hpp>
 #include <hpx/lcos/promise.hpp>
 
-#include <vector>
+#include <hpx/runtime/components/component_type.hpp>
+#include <hpx/runtime/components/server/managed_component_base.hpp>
+#include <hpx/util/one_size_heap_list_base.hpp>
+
+#include <boost/detail/atomic_count.hpp>
 
 namespace hpx { namespace traits { namespace detail
 {
