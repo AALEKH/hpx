@@ -10,6 +10,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/util/register_locks_globally.hpp>
+#include <hpx/runtime/naming/id_type.hpp>
 #include <hpx/runtime/serialization/serialization_fwd.hpp>
 #include <hpx/traits/is_bitwise_serializable.hpp>
 #include <hpx/traits/promise_remote_result.hpp>

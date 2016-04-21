@@ -12,8 +12,8 @@
 #include <hpx/runtime/threads/policies/scheduler_mode.hpp>
 #include <hpx/runtime/threads/thread_enums.hpp>
 #include <hpx/util/date_time_chrono.hpp>
-#include <hpx/util/unique_function.hpp>
 #include <hpx/util/thread_description.hpp>
+#include <hpx/util/unique_function.hpp>
 
 #include <boost/intrusive_ptr.hpp>
 #include <boost/detail/atomic_count.hpp>
