@@ -32,6 +32,7 @@ namespace boost
       { "(\\bboost\\s*::\\s*decay\\b)", "std::decay" },
 //       { "(\\bboost\\s*::\\s*(is_[^\\s]*?\\b))", "std::\\2" },
       { "(\\bboost\\s*::\\s*lock_guard\\b)", "std::lock_guard" },
+      { "(\\bboost\\s*::\\s*detail\\s*::\\s*atomic_count\\b)", "hpx::util::atomic_count" },
       { 0, 0 }
     };
 
